@@ -1,4 +1,8 @@
 #Thin uncomment if you want to take a filename as an argument
+
+
+python ca
+
 if [ "$#" -ne 4 ]; then
     echo "Usage: $0 path/to/aimsRun.py /path/to/temp number_of_calcs_at_once number_of_lines_in_x_files"
     exit 1
