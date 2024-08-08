@@ -1,0 +1,26 @@
+#!/bin/bash -l
+# Standard output and error:
+#SBATCH -o ./tjob.out.%j
+#SBATCH -e ./tjob.err.%j
+# Initial working directory:
+#SBATCH -D ./
+# Job Name:
+#SBATCH -J waterAIMS 
+#
+# Number of nodes and MPI tasks per node:
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=128
+#SBATCH --cpus-per-task=1
+#
+# Wall clock limit:
+#SBATCH --time=2:00:00
+#Load compiler and modules
+#export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${INTEL_HOME}/compiler/2021.4.0/linux/compiler/lib/intel64_lin/"
+module load anaconda/3/2023.03
+module load gcc/13 openmpi/4.1 mkl/2024.0
+module load parallel/201807
+
+
+
+
+

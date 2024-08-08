@@ -1,0 +1,21 @@
+#!/bin/bash -l
+
+#SBATCH --no-requeue
+#SBATCH --nodes=4
+#SBATCH --ntasks-per-node=72
+#SBATCH --time=1:00:00
+#SBATCH -o ./tjob.out.%j
+#SBATCH -e ./tjob.err.%j
+
+module load parallel/201807
+
+export OMP_NUM_THREADS=1        #Disables OpenMP multi-threading
+export MKL_DYNAMIC=FALSE        #Disables MKL (Math Kernel Library) to dynamically change the number of threads
+export MKL_NUM_THREADS=1        #Disable MKL multi-threading
+
+#Load compiler and modules
+module load anaconda/3/2020.02
+module load intel/21.4.0
+module load mkl/2021.4
+module load impi/2021.4
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${INTEL_HOME}/compiler/2021.4.0/linux/compiler/lib/intel64_lin/"
