@@ -1,4 +1,7 @@
-def prep_aims_ase_file(base_file="aims_ase_template.py",final_name="runAims.py",aims_command="raven",aims_species="raven/species/"):
+def prep_aims_ase_file(base_file="aims_ase_template.py",
+                       final_name="runAims.py",
+                       aims_command="raven",
+                       aims_species="raven/species/"):
     with open(base_file, 'r') as base_file:
         base_lines = base_file.read()
     with open(f'{final_name}', 'w') as final_file:
