@@ -22,3 +22,4 @@ calc = Aims(output=["hirshfeld","hartree_multipoles"],
             **aims_kwargs)
 mols.calc = calc
 mols.get_potential_energy()
+

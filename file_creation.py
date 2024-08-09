@@ -17,7 +17,7 @@ def prep_submit_header(submitted_nodes,NTASK_PER_NODE,PRESETS_FOR_HEADER,wall_ti
     header_file.write("\n")
     header_file.write(f"#SBATCH --nodes={submitted_nodes}\n")
     header_file.write(f"#SBATCH --ntasks-per-node={NTASK_PER_NODE}\n")
-    header_file.write(f"#SBATCH --ntasks-per-node=1\n")
+    header_file.write(f"#SBATCH --cpus-per-task=1\n")
     header_file.write(f"#SBATCH --time={wall_time}\n")
     header_file.write("\n")
     header_file.write(f"{PRESETS_FOR_HEADER}")

@@ -19,6 +19,7 @@ parser.add_argument("--strucs",help="File from which DFT folders should be prepa
 parser.add_argument("--strucs_ext",help="Extension of the strucs file",type=str,default="extxyz")
 parser.add_argument("--method",help="Name of code you want to use",type=str,choices=["aims"])
 parser.add_argument("--aims_basis",choices=["light","intermediate","tight"])
+parser.add_argument("--wall_time",help="Wall time in a slurm script, has to be provided in the string form hh:mm:ss",type=str)
 
 args = parser.parse_args()
 
@@ -67,7 +68,10 @@ at_the_same_time = int(at_the_same_time)
 print(f"bash prep_aims.sh aimsRun.py temp {at_the_same_time} {per_file}")
 if args.prep_submit:
     job_name=args.job_name
-    file_creation.prep_submit_header(submitted_nodes,CPUS_PER_NODE,PRESETS_FOR_HEADER)
+    file_creation.prep_submit_header(submitted_nodes,
+                                     CPUS_PER_NODE,
+                                     PRESETS_FOR_HEADER,
+                                     wall_time = args.wall_time)
 
 if args.method == "aims":
     file_creation.prep_aims_ase_file(final_name=aims_run_file,
@@ -102,4 +106,4 @@ if prep_folders:
         os.mkdir(dir_name)
         shutil.move(struc_file_name,dir_name)
         shutil.copy(aims_run_file,dir_name)
-        paral_file.write(f"cd {dir_name}; python aimsRun.py {struc_file_name    } {node_per_job} {cpu_per_job_to_srun}\n")
+        paral_file.write(f"cd {dir_name}; python {aims_run_file} {struc_file_name} {node_per_job} {cpu_per_job_to_srun}\n")
