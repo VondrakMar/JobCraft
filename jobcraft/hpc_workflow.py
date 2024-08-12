@@ -22,19 +22,34 @@ class HPC_job():
                  hpc_setting = "raven",
                  path_to_species=None):
         # Raven settings
+        self.method = method
+        self.hpc_setting = hpc_setting
+        if self.method == "aims":
+            if self.hpc_setting == "raven":
+                self.PRESETS_FOR_HEADER = aims.aims_input.aims_for_raven
+                self.AIMS_PATH = aims.aims_input.aims_path_raven
+                self.AIMS_EXEC = f"{self.AIMS_PATH}{aims.aims_input.aims_exec_raven}"
+                if path_to_species == None:
+                    self.AIMS_SPECIEC = f"{self.AIMS_PATH}{aims.aims_input.aims_species_raven}"
+                else:
+                    self.AIMS_SPECIEC = path_to_species
+            elif self.hpc_setting == "viper":
+                self.PRESETS_FOR_HEADER = aims.aims_input.aims_for_viper
+                self.AIMS_PATH = aims.aims_input.aims_path_viper
+                self.AIMS_EXEC = f"{self.AIMS_PATH}{aims.aims_input.aims_exec_viper}"
+                if path_to_species == None:
+                    self.AIMS_SPECIEC = f"{self.AIMS_PATH}{aims.aims_input.aims_species_viper}"
+                else:
+                    self.AIMS_SPECIEC = path_to_species
+
+
         if hpc_setting == "raven":
             self.NTASKS_PER_NODE = 72 # this has to be change
             self.CPUS_PER_NODE = 1
             self.CPUS_PER_NODE_HW = 72 # I fuck up and this has to be here together with the setting before until I will unfuck it
             self.MEMORY_PER_NODE_GB = 240 
             self.MEMORY_PER_NODE_MB = 240000 
-            self.PRESETS_FOR_HEADER = my_presets.aims_for_raven
-            self.AIMS_EXEC = "{self.AIMS_PATH}{my_presets.aims_exec_raven}"
-            self.AIMS_PATH = my_presets.aims_path_raven
-            if path_to_species == None:
-                self.AIMS_SPECIEC = "{self.AIMS_PATH}{my_presets.aims_species_raven}"
-            else:
-                self.AIMS_SPECIEC = path_to_species
+
         # Viper setting
         elif hpc_setting =="viper":
             self.NTASKS_PER_NODE = 128 # this has to be change, it works only for AIMS settings
@@ -47,7 +62,6 @@ class HPC_job():
         self.submitted_nodes = usedN
         self.node_per_job = N 
         self.cpu_per_job = n 
-        self.method = method
         if self.node_per_job == 1:
             n_cpus = self.submitted_nodes*self.CPUS_PER_NODE_HW
             self.at_the_same_time = n_cpus/self.cpu_per_job 
@@ -63,6 +77,9 @@ class HPC_job():
 
     def prep_submit_header(self,
                            wall_time="1:00:00"):
+        '''
+        This function is universal for all methods, only thing dependable on used cacl method is PRESETS_FOR_HEADER. 
+        '''
         header_file = open("header_file.temp","w")
         header_file.write("#!/bin/bash -l\n")
         header_file.write("#SBATCH -o ./tjob.out.%j\n") # stardart output file
@@ -124,6 +141,7 @@ class HPC_job():
                           strucs,
                           strucs_format,
                           strucs_ext,
+                          geometry_lines=[],
                           aims_basis="light",
                           per_file=64,
                           all_control_same = True):
@@ -147,16 +165,28 @@ class HPC_job():
                 count+=1
                 slurm_file = open(f"submit_file{count}.sl","w")
                 slurm_file.write(head_data)
-                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {self.at_the_same_time} < paral_file{count}")
+                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {int(self.at_the_same_time)} < paral_file{count}")
                 paral_file = open(f"paral_file{count}","w")
             dir_name = f"struc{id_mol:0{counting_digits}}/"
             struc_file_name = f"struc{id_mol:0{counting_digits}}{strucs_ext}" 
             ase.io.write(struc_file_name,mol,format=f"{strucs_format}")
-            ase.io.write("geometry.in",mol,format=f"aims")
+            ase.io.write("temp.in",mol,format=f"aims")
+            #################
+            with open('temp.in', 'r') as file:
+                temp_control = file.readlines()
+            to_which_line = 5 # proablby be aware if ASE will change number of lines it putting in the geometry.in file 
+            for geometry_line in geometry_lines:
+                temp_control.insert(to_which_line, f'{geometry_line}\n')
+                to_which_line += 1
+            with open('geometry.in', 'w') as file:
+                file.writelines(temp_control)
+
+            ################
             os.mkdir(dir_name)
             shutil.move(struc_file_name,dir_name)
             shutil.move("geometry.in",dir_name)
             if not all_control_same:
                 aims.aims_input.prep_aims_file(mol,aims_species)
             shutil.copy("control.in",dir_name)
-            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n")
+            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name='struc00100.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f\'{{sys.argv[1]}}.xyz\', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}.xyz\n")
+            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")

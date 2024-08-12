@@ -17,13 +17,14 @@ parser.add_argument("--use_ase",help="if the ase should be used for dft calculat
 ################# AIMS INPUT
 parser.add_argument("--aims_basis",choices=["light","intermediate","tight"],type=str)
 parser.add_argument("--aims_species_path",default=None,type=str)
-
+parser.add_argument("--aims_geometry_lines",nargs='+',default=[])
 
 args = parser.parse_args()
 strucs_ext = formats.ext_to_name(args.strucs_format)
 strucs_format = args.strucs_format
 
 ###########
+
 aims_run_file = "aims_run.py"
 ########
 per_file = args.per_submit
@@ -34,10 +35,12 @@ my_job = hpc_workflow.HPC_job(
     N = args.N,
     n = args.n,
     method = args.method,
+    hpc_setting = args.hpc,
     path_to_species=args.aims_species_path
 )
 if args.prep_submit:
     my_job.prep_submit_header(wall_time = args.wall_time)
+
 if args.method == "aims" and args.use_ase == True:
     my_job.prep_ase_file(aims_basis=args.aims_basis,aims_run_file=aims_run_file)
     my_job.prep_aims_ase_folders(strucs=args.strucs,
@@ -45,7 +48,7 @@ if args.method == "aims" and args.use_ase == True:
                                  strucs_format=strucs_format,
                                  strucs_ext=strucs_ext,
                                  per_file=per_file)
-
+# geometry_lines = ["homogeneous_field 0.25 0 0"]
 if args.method == "aims" and args.use_ase == False:
     '''
     this still will use ASE for generating structures, but final run is done withou ase
@@ -55,4 +58,7 @@ if args.method == "aims" and args.use_ase == False:
                             strucs_format=strucs_format,
                             strucs_ext=strucs_ext,
                             aims_basis=args.aims_basis,
-                            per_file=per_file)
+                            per_file=per_file,
+                            geometry_lines = args.aims_geometry_lines)
+    
+    
