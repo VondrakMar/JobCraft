@@ -1,6 +1,7 @@
 import os
 import my_presets
 import file_creation
+import aims.aims_input
 '''
 the script prep_aims.sh is used as bash prep_aims.sh aimsRun.py temp at_the_same_time in_one_file
 herein I am calculating how many of at_the_same_time and in_one_file should be used based on sbatch setting
@@ -9,7 +10,7 @@ this script assumes you are using GNU parallel
 WARNING: This code is tested only with my version of ASE. It probably will still work with 3.22.1 version of ASE 
 from the main repository, but the newest one will definetly screem in problems
 example of usage 
-python hpc_workflow.py raven --usedN 4 -N 1 -n 4 --prep_submit --strucs waters.xyz --method="aims" --aims_basis="tight" --wall_time="1:00:00"
+python /path/to/jobcraft/preparation_script.py raven --usedN 4 -N 1 -n 4 --prep_submit --strucs waters.xyz --method="aims" --aims_basis="tight" --wall_time="1:00:00"
 '''
 
 class HPC_job():
@@ -18,21 +19,27 @@ class HPC_job():
                  N = 1,
                  n = 1,
                  method = "aims",
-                 hpc_setting = "raven"):
+                 hpc_setting = "raven",
+                 path_to_species=None):
         # Raven settings
         if hpc_setting == "raven":
             self.NTASKS_PER_NODE = 72 # this has to be change
-            self.CPUS_PER_NODE = 72
+            self.CPUS_PER_NODE = 1
+            self.CPUS_PER_NODE_HW = 72 # I fuck up and this has to be here together with the setting before until I will unfuck it
             self.MEMORY_PER_NODE_GB = 240 
             self.MEMORY_PER_NODE_MB = 240000 
             self.PRESETS_FOR_HEADER = my_presets.aims_for_raven
-            self.AIMS_EXEC = my_presets.aims_exec_raven
+            self.AIMS_EXEC = "{self.AIMS_PATH}{my_presets.aims_exec_raven}"
             self.AIMS_PATH = my_presets.aims_path_raven
-            self.AIMS_SPECIEC = my_presets.aims_species_raven
+            if path_to_species == None:
+                self.AIMS_SPECIEC = "{self.AIMS_PATH}{my_presets.aims_species_raven}"
+            else:
+                self.AIMS_SPECIEC = path_to_species
         # Viper setting
         elif hpc_setting =="viper":
             self.NTASKS_PER_NODE = 128 # this has to be change, it works only for AIMS settings
-            self.CPUS_PER_NODE = 128
+            self.CPUS_PER_NODE = 1
+            self.CPUS_PER_NODE_HW = 128 # I fuck up and this has to be here together with the setting before until I will unfuck it
             self.MEMORY_PER_NODE_GB = 480 # I took this from the viper website from the table
             self.MEMORY_PER_NODE_MB = 480000 
             self.PRESETS_FOR_HEADER = my_presets.aims_for_viper
@@ -42,7 +49,7 @@ class HPC_job():
         self.cpu_per_job = n 
         self.method = method
         if self.node_per_job == 1:
-            n_cpus = self.submitted_nodes*self.CPUS_PER_NODE
+            n_cpus = self.submitted_nodes*self.CPUS_PER_NODE_HW
             self.at_the_same_time = n_cpus/self.cpu_per_job 
             self.cpu_per_job_to_srun = self.cpu_per_job
             if (not self.at_the_same_time.is_integer()):
@@ -65,7 +72,7 @@ class HPC_job():
         header_file.write("\n")
         header_file.write(f"#SBATCH --nodes={self.submitted_nodes}\n")
         header_file.write(f"#SBATCH --ntasks-per-node={self.NTASKS_PER_NODE}\n")
-        header_file.write(f"#SBATCH --cpus-per-task=1\n")
+        header_file.write(f"#SBATCH --cpus-per-task={self.CPUS_PER_NODE}\n")
         header_file.write(f"#SBATCH --time={wall_time}\n")
         header_file.write("\n")
         header_file.write(f"{self.PRESETS_FOR_HEADER}")
@@ -76,11 +83,11 @@ class HPC_job():
                       aims_basis,
                       aims_run_file):
         if self.method == "aims":
-            file_creation.prep_aims_ase_file(final_name=aims_run_file,
-                                     aims_command=f"{self.AIMS_PATH}{self.AIMS_EXEC}",
-                                     aims_species=f"{self.AIMS_PATH}{self.AIMS_SPECIEC}{aims_basis}")
-    
-    def prep_folders(self,
+            aims.aims_input.prep_aims_ase_file(final_name=aims_run_file,
+                                     aims_command=f"{self.AIMS_EXEC}",
+                                     aims_species=f"{self.AIMS_SPECIEC}{aims_basis}")
+
+    def prep_aims_ase_folders(self,
                      strucs,
                      aims_run_file,
                      strucs_format,
@@ -111,3 +118,45 @@ class HPC_job():
             shutil.move(struc_file_name,dir_name)
             shutil.copy(aims_run_file,dir_name)
             paral_file.write(f"cd {dir_name}; python {aims_run_file} {struc_file_name} {self.node_per_job} {self.cpu_per_job_to_srun}\n")
+
+
+    def prep_aims_folders(self,
+                          strucs,
+                          strucs_format,
+                          strucs_ext,
+                          aims_basis="light",
+                          per_file=64,
+                          all_control_same = True):
+        with open("header_file.temp","r") as head_file:
+            head_data= head_file.read()
+        import ase.io
+        import shutil
+        mols = ase.io.read(f"{strucs}@:",format=f"{strucs_format}")
+        aims_command=f"{self.AIMS_EXEC}"
+        aims_species=f"{self.AIMS_SPECIEC}{aims_basis}"
+        counting_digits = len(str(len(mols)))+1
+        prev_sub_mol = 0
+        count = -1
+        if all_control_same:
+            aims.aims_input.prep_aims_file(mols[0],aims_species)
+        for id_mol,mol in enumerate(mols):
+            if id_mol%per_file == 0:
+                if id_mol != 0:
+                    slurm_file.close()
+                    paral_file.close()
+                count+=1
+                slurm_file = open(f"submit_file{count}.sl","w")
+                slurm_file.write(head_data)
+                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {self.at_the_same_time} < paral_file{count}")
+                paral_file = open(f"paral_file{count}","w")
+            dir_name = f"struc{id_mol:0{counting_digits}}/"
+            struc_file_name = f"struc{id_mol:0{counting_digits}}{strucs_ext}" 
+            ase.io.write(struc_file_name,mol,format=f"{strucs_format}")
+            ase.io.write("geometry.in",mol,format=f"aims")
+            os.mkdir(dir_name)
+            shutil.move(struc_file_name,dir_name)
+            shutil.move("geometry.in",dir_name)
+            if not all_control_same:
+                aims.aims_input.prep_aims_file(mol,aims_species)
+            shutil.copy("control.in",dir_name)
+            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n")

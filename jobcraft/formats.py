@@ -1,7 +1,7 @@
 def ext_to_name(format):
     if format == "extxyz":
-        return "xyz"
+        return ".xyz"
     elif format == "aims":
-        return "in"
+        return ".in"
     else:
         return format

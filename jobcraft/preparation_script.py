@@ -13,9 +13,10 @@ parser.add_argument("--strucs_format",help="Extension of the strucs file",type=s
 parser.add_argument("--method",help="Name of code you want to use",type=str,choices=["aims"])
 parser.add_argument("--wall_time",help="Wall time in a slurm script, has to be provided in the string form hh:mm:ss",default="1:00:00",type=str)
 parser.add_argument("--per_submit",help="How many jobs will run in 1 submit", type=int,default=64)
-
+parser.add_argument("--use_ase",help="if the ase should be used for dft calculation. Be aware, this is not implemented for all dft code, and ASE has some limitation in certain cases",action="store_true")
 ################# AIMS INPUT
-parser.add_argument("--aims_basis",choices=["light","intermediate","tight"])
+parser.add_argument("--aims_basis",choices=["light","intermediate","tight"],type=str)
+parser.add_argument("--aims_species_path",default=None,type=str)
 
 
 args = parser.parse_args()
@@ -32,13 +33,26 @@ my_job = hpc_workflow.HPC_job(
     usedN = args.usedN,
     N = args.N,
     n = args.n,
-    method = args.method
+    method = args.method,
+    path_to_species=args.aims_species_path
 )
 if args.prep_submit:
     my_job.prep_submit_header(wall_time = args.wall_time)
-my_job.prep_ase_file(aims_basis=args.aims_basis,aims_run_file=aims_run_file)
-my_job.prep_folders(strucs=args.strucs,
-                    aims_run_file=aims_run_file,
-                     strucs_format=strucs_format,
-                     strucs_ext=strucs_ext,
-                     per_file=per_file)
+if args.method == "aims" and args.use_ase == True:
+    my_job.prep_ase_file(aims_basis=args.aims_basis,aims_run_file=aims_run_file)
+    my_job.prep_aims_ase_folders(strucs=args.strucs,
+                                 aims_run_file=aims_run_file,
+                                 strucs_format=strucs_format,
+                                 strucs_ext=strucs_ext,
+                                 per_file=per_file)
+
+if args.method == "aims" and args.use_ase == False:
+    '''
+    this still will use ASE for generating structures, but final run is done withou ase
+    good for example when you want to run external field
+    '''
+    my_job.prep_aims_folders(strucs=args.strucs,
+                            strucs_format=strucs_format,
+                            strucs_ext=strucs_ext,
+                            aims_basis=args.aims_basis,
+                            per_file=per_file)

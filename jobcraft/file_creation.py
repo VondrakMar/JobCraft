@@ -1,13 +1,7 @@
-def prep_aims_ase_file(base_file="aims_ase_template.py",
-                       final_name="runAims.py",
-                       aims_command="raven",
-                       aims_species="raven/species/"):
-    with open(base_file, 'r') as base_file:
-        base_lines = base_file.read()
-    with open(f'{final_name}', 'w') as final_file:
-        final_file.write(f'aims_command="{aims_command}"\n')
-        final_file.write(f'aims_species="{aims_species}"\n')
-        final_file.write("\n"+base_lines)
+import os
+import ase.io
+
+
 
 # prep_aims_ase_file()
 def prep_submit_header(submitted_nodes,NTASK_PER_NODE,PRESETS_FOR_HEADER,wall_time="1:00:00"):
@@ -26,3 +20,13 @@ def prep_submit_header(submitted_nodes,NTASK_PER_NODE,PRESETS_FOR_HEADER,wall_ti
     header_file.write(f"{PRESETS_FOR_HEADER}")
     #header_file.write("#SBATCH --cpus-per-task=1\n")
     header_file.close()
+
+def save_results_to_xyz(mol,results,prepositon="dft_",saved_name="struc_saved.xyz"):
+    for res in results:
+        if type(results[res]) == float:
+            mol.info[f"{prepositon}{res}"] = results[res]
+        elif len(results[res]) == len(mol):
+            mol.arrays[f"{prepositon}{res}"] = results[res]
+        else: 
+            mol.info[f"{prepositon}{res}"] = results[res] # this is not tested, it should load dipole vector for example
+    ase.io.write(saved_name,mol)
