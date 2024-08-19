@@ -51,15 +51,23 @@ def prep_aims_ase_file(base_file=None,
 
     
 def prep_aims_file(mol = None,
-                   aims_species="raven/species/"):
+                   aims_species="raven/species/",
+                   aims_kwargs_dict=None):
     from ase.calculators.aims import Aims
     # for writing basic input file for aims I am using ASE.
-    aims_kwargs = {
-        'xc': 'pbe0',
-        'relativistic': ("atomic_zora", "scalar"),
-        'compute_forces': True,
-        'override_illconditioning': True,
-    }
+
+    if aims_kwargs_dict == None:
+        aims_kwargs = {
+            'xc': 'pbe0',
+            'relativistic': ("atomic_zora", "scalar"),
+            'compute_forces': True,
+            'override_illconditioning': True,
+            # 'charge' : -1,
+            # 'fixed_spin_moment': 1,
+            # 'spin': 'collinear',
+        }
+    else:
+        aims_kwargs = aims_kwargs_dict
     aims_outputs = ["hirshfeld","hartree_multipoles"]
 
     calc = Aims(output=aims_outputs,
@@ -69,3 +77,8 @@ def prep_aims_file(mol = None,
 
     calc.write_input(mol,"control.in")
 
+def prep_restart_DFTs():
+    import subprocess
+    command = "for a in */; do echo $a; tail -2 ${a}aims.out | head -1 ; done"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    print(result)

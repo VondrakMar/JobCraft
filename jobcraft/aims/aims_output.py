@@ -3,7 +3,7 @@ import ase.io
 import os
 
 
-def read_aims_output(mol=None,mol_file_name=None,mol_file_format="extxyz",output_name="aims.out",properties=["energy"]):
+def read_aims_output(mol=None,mol_file_name=None,mol_file_format="extxyz",output_name="aims.out",properties=["energy"],xc=None,spin=False):
     '''
     currently implemented readings. I was (heavily) inspired by the ASE, but adding reading of hirshfeld charges was easir this way,
     becaues I have a small brain
@@ -45,9 +45,20 @@ def read_aims_output(mol=None,mol_file_name=None,mol_file_format="extxyz",output
         for n,line in enumerate(output_file):
             if (line.rfind("Performing Hirshfeld analysis of fragment charges and moments.")) >-1:
                 count = 0
-                for iatom in range(natoms):
-                    data = output_file[n + iatom*10 + 3].split()
-                    hirshfeld.append(float(data[-1]))
+                if xc == "pbesol":
+                    for iatom in range(natoms):
+                        if spin:
+                            data = output_file[n + iatom*11 + 7].split()
+                        else:
+                            data = output_file[n + iatom*10 + 7].split()
+                        hirshfeld.append(float(data[-1]))
+                else:
+                    for iatom in range(natoms):
+                        if spin:
+                            data = output_file[n + iatom*11 + 3].split()
+                        else:
+                            data = output_file[n + iatom*10 + 3].split()
+                        hirshfeld.append(float(data[-1]))
         results['hirshfeld'] = np.array(hirshfeld)
 
     return results

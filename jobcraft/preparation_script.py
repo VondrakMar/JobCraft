@@ -1,6 +1,8 @@
 import hpc_workflow
 import formats
 import argparse
+import json
+
 parser = argparse.ArgumentParser()
 parser.add_argument("hpc",help="Setup which HPC you want to use, current settings are viper and raven",type=str,choices=["viper","raven"])
 parser.add_argument("--usedN",help="How many nodes are used in one submission script",type=int)
@@ -18,10 +20,12 @@ parser.add_argument("--use_ase",help="if the ase should be used for dft calculat
 parser.add_argument("--aims_basis",choices=["light","intermediate","tight"],type=str)
 parser.add_argument("--aims_species_path",default=None,type=str)
 parser.add_argument("--aims_geometry_lines",nargs='+',default=[])
+parser.add_argument("--aims_kwargs",type=str,default=None)
 
 args = parser.parse_args()
 strucs_ext = formats.ext_to_name(args.strucs_format)
 strucs_format = args.strucs_format
+aims_kwargs = json.loads(args.aims_kwargs)
 
 ###########
 
@@ -59,6 +63,7 @@ if args.method == "aims" and args.use_ase == False:
                             strucs_ext=strucs_ext,
                             aims_basis=args.aims_basis,
                             per_file=per_file,
-                            geometry_lines = args.aims_geometry_lines)
+                            geometry_lines = args.aims_geometry_lines,
+                            aims_kwargs_dict=aims_kwargs)
     
     

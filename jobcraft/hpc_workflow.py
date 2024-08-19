@@ -144,7 +144,8 @@ class HPC_job():
                           geometry_lines=[],
                           aims_basis="light",
                           per_file=64,
-                          all_control_same = True):
+                          all_control_same = True,
+                          aims_kwargs_dict=None):
         with open("header_file.temp","r") as head_file:
             head_data= head_file.read()
         import ase.io
@@ -156,7 +157,7 @@ class HPC_job():
         prev_sub_mol = 0
         count = -1
         if all_control_same:
-            aims.aims_input.prep_aims_file(mols[0],aims_species)
+            aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict)
         for id_mol,mol in enumerate(mols):
             if id_mol%per_file == 0:
                 if id_mol != 0:
@@ -188,5 +189,5 @@ class HPC_job():
             if not all_control_same:
                 aims.aims_input.prep_aims_file(mol,aims_species)
             shutil.copy("control.in",dir_name)
-            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name='{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f\'{{sys.argv[1]}}.xyz\', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}.xyz\n")
+            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
             # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")
