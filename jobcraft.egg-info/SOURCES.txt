@@ -6,6 +6,7 @@ jobcraft/formats.py
 jobcraft/hpc_workflow.py
 jobcraft/my_presets.py
 jobcraft/preparation_script.py
+jobcraft/utils.py
 jobcraft.egg-info/PKG-INFO
 jobcraft.egg-info/SOURCES.txt
 jobcraft.egg-info/dependency_links.txt
@@ -13,4 +14,5 @@ jobcraft.egg-info/top_level.txt
 jobcraft/aims/__init__.py
 jobcraft/aims/aims_input.py
 jobcraft/aims/aims_output.py
+jobcraft/aims/hartree_multipoles.py
 jobcraft/templates/__init__.py
