@@ -1,0 +1,1 @@
+python -c "import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(xc='pbe',mol_file_name=f'{sys.argv[1]}.xyz', properties=['hirshfeld_spin']); mol = ase.io.read(f'{sys.argv[1]}.xyz', format='extxyz'); save_results_to_xyz(mol, res)" test
