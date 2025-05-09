@@ -2,3 +2,5 @@ header_file.temp
 build/
 aims_run.py
 *__pycache*
+jobcraft.egg-info/PKG-INFO
+jobcraft.egg-info/SOURCES.txt

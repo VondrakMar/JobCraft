@@ -2,6 +2,7 @@ import os
 import my_presets
 import file_creation
 import aims.aims_input
+import numpy as np
 '''
 the script prep_aims.sh is used as bash prep_aims.sh aimsRun.py temp at_the_same_time in_one_file
 herein I am calculating how many of at_the_same_time and in_one_file should be used based on sbatch setting
@@ -142,10 +143,24 @@ class HPC_job():
                           strucs_format,
                           strucs_ext,
                           geometry_lines=[],
+                          atoms_lines=[],
+                          atoms_indeces=[],
                           aims_basis="light",
                           per_file=64,
                           all_control_same = True,
                           aims_kwargs_dict=None):
+        if isinstance(atoms_lines, str):
+            atoms_lines = [atoms_lines]
+        assert len(atoms_indeces) == len(atoms_lines) or len(atoms_lines) == 1, "atoms_indeces and atoms_lines are different lenght"
+        if len(atoms_indeces) > 0:
+            atoms_indeces = [int(tmp) for tmp in atoms_indeces]
+            # Indeces has to be sorted, otherwise the lines will move and it won't be placed in the correct spot
+            sorted_indices = np.argsort(-np.array(np.array(atoms_indeces)))  # minus for descending sort            
+            atoms_indeces = [atoms_indeces[sorted_indice] for sorted_indice in sorted_indices]
+            if len(atoms_lines) > 1:
+                atoms_lines = [atoms_lines[sorted_indice] for sorted_indice in sorted_indices]
+        print("atoms_lines",atoms_lines)
+        print("atoms_indeces",atoms_indeces)
         with open("header_file.temp","r") as head_file:
             head_data= head_file.read()
         import ase.io
@@ -174,13 +189,17 @@ class HPC_job():
             ase.io.write("temp.in",mol,format=f"aims")
             #################
             with open('temp.in', 'r') as file:
-                temp_control = file.readlines()
-            to_which_line = 5 # proablby be aware if ASE will change number of lines it putting in the geometry.in file 
+                temp_geometry = file.readlines()
+            appended_header = 5 # probably be aware if ASE will change number of lines it putting in the geometry.in file 
             for geometry_line in geometry_lines:
-                temp_control.insert(to_which_line, f'{geometry_line}\n')
-                to_which_line += 1
+                temp_geometry.insert(appended_header, f'{geometry_line}\n')
+                appended_header += 1
+            if len(atoms_lines) == 1:
+                cur_line = atoms_lines[0]
+                for atoms_indx in atoms_indeces:
+                    temp_geometry.insert(atoms_indx+appended_header+1, f'{cur_line}\n') # + 1 because the keywords inside of the geometry.in are applied on the previous line
             with open('geometry.in', 'w') as file:
-                file.writelines(temp_control)
+                file.writelines(temp_geometry)
 
             ################
             os.mkdir(dir_name)
