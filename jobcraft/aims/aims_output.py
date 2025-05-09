@@ -26,7 +26,11 @@ def read_aims_output(mol: str =None,
         assert type(mol) != list, "mol should be a ase.atoms object not a list"
         natoms = len(mol)
     elif mol == None:
-        mol = ase.io.read(mol_file_name,format=mol_file_format)
+        if mol_file_name != "geometry.in":
+            mol = ase.io.read(mol_file_name,format=mol_file_format)
+        elif mol_file_name == "geometry.in":
+            mol = ase.io.read("geometry.in")
+    
         natoms = len(mol)
     elif mol == None and mol_file_name == None:
         print("specify name of the file to load or ase.Atoms object")

@@ -159,8 +159,6 @@ class HPC_job():
             atoms_indeces = [atoms_indeces[sorted_indice] for sorted_indice in sorted_indices]
             if len(atoms_lines) > 1:
                 atoms_lines = [atoms_lines[sorted_indice] for sorted_indice in sorted_indices]
-        print("atoms_lines",atoms_lines)
-        print("atoms_indeces",atoms_indeces)
         with open("header_file.temp","r") as head_file:
             head_data= head_file.read()
         import ase.io
