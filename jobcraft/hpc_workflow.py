@@ -261,7 +261,6 @@ class HPC_job():
             # else:
             # id_folder = int(mol_name[len_prep:])
             if id_mol%per_file == 0:
-                print("hello")
                 if id_mol != 0:
                     slurm_file.close()
                     paral_file.close()
@@ -270,54 +269,4 @@ class HPC_job():
                 slurm_file.write(head_data)
                 slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {int(self.at_the_same_time)} < {self.paral_file_name}{count}")
                 paral_file = open(f"{self.paral_file_name}{count}","w")
-            paral_file.write(f"cd {mol_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
-        '''
-        import ase.io
-        import shutil
-        mols = ase.io.read(f"{strucs}@:",format=f"{strucs_format}")
-        aims_command=f"{self.AIMS_EXEC}"
-        aims_species=f"{self.AIMS_SPECIEC}{aims_basis}"
-        counting_digits = len(str(len(mols)))+1
-        prev_sub_mol = 0
-        count = -1
-        if all_control_same: # TODO: what the fuck is this doing, and what I was thinking?
-            aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict)
-        for id_mol,mol in enumerate(mols):
-            if id_mol%per_file == 0:
-                if id_mol != 0:
-                    slurm_file.close()
-                    paral_file.close()
-                count+=1
-                slurm_file = open(f"submit_file{count}.sl","w")
-                slurm_file.write(head_data)
-                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {int(self.at_the_same_time)} < paral_file{count}")
-                paral_file = open(f"paral_file{count}","w")
-            dir_name = f"struc{id_mol:0{counting_digits}}/"
-            struc_file_name = f"struc{id_mol:0{counting_digits}}{strucs_ext}" 
-            ase.io.write(struc_file_name,mol,format=f"{strucs_format}")
-            ase.io.write("temp.in",mol,format=f"aims")
-            #################
-            with open('temp.in', 'r') as file:
-                temp_geometry = file.readlines()
-            appended_header = 5 # probably be aware if ASE will change number of lines it putting in the geometry.in file 
-            for geometry_line in geometry_lines:
-                temp_geometry.insert(appended_header, f'{geometry_line}\n')
-                appended_header += 1
-            if len(atoms_lines) == 1:
-                cur_line = atoms_lines[0]
-                for atoms_indx in atoms_indeces:
-                    temp_geometry.insert(atoms_indx+appended_header+1, f'{cur_line}\n') # + 1 because the keywords inside of the geometry.in are applied on the previous line
-            with open('geometry.in', 'w') as file:
-                file.writelines(temp_geometry)
-
-            ################
-            os.mkdir(dir_name)
-            shutil.move(struc_file_name,dir_name)
-            shutil.move("geometry.in",dir_name)
-            if not all_control_same:
-                aims.aims_input.prep_aims_file(mol,aims_species)
-            shutil.copy("control.in",dir_name)
-            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
-            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")
-            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
-        '''
+            paral_file.write(f"cd {mol_name}; mv aims.out aims_tmp.out ; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
