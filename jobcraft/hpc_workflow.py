@@ -10,8 +10,6 @@ this is usable for everything
 this script assumes you are using GNU parallel
 WARNING: This code is tested only with my version of ASE. It probably will still work with 3.22.1 version of ASE 
 from the main repository, but the newest one will definetly screem in problems
-example of usage 
-python /path/to/jobcraft/preparation_script.py raven --usedN 4 -N 1 -n 4 --prep_submit --strucs waters.xyz --method="aims" --aims_basis="tight" --wall_time="1:00:00"
 '''
 
 class HPC_job():
@@ -21,10 +19,12 @@ class HPC_job():
                  n = 1,
                  method = "aims",
                  hpc_setting = "raven",
-                 path_to_species=None):
+                 path_to_species=None,
+                 diff_Ncpu=False):
         # Raven settings
         self.method = method
         self.hpc_setting = hpc_setting
+        self.diff_Ncpu = diff_Ncpu
         if self.method == "aims":
             if self.hpc_setting == "raven":
                 self.PRESETS_FOR_HEADER = aims.aims_input.aims_for_raven
@@ -62,7 +62,10 @@ class HPC_job():
 
         self.submitted_nodes = usedN
         self.node_per_job = N 
-        self.cpu_per_job = n 
+        if self.diff_Ncpu and self.node_per_job > 1:
+            self.cpu_per_job = n 
+        else:
+            self.cpu_per_job = self.CPUS_PER_NODE_HW
         if self.node_per_job == 1:
             n_cpus = self.submitted_nodes*self.CPUS_PER_NODE_HW
             self.at_the_same_time = n_cpus/self.cpu_per_job 
@@ -206,5 +209,6 @@ class HPC_job():
             if not all_control_same:
                 aims.aims_input.prep_aims_file(mol,aims_species)
             shutil.copy("control.in",dir_name)
-            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
+            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
             # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")
+            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")

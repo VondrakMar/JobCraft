@@ -8,6 +8,7 @@ parser.add_argument("hpc",help="Setup which HPC you want to use, current setting
 parser.add_argument("--usedN",help="How many nodes are used in one submission script",type=int)
 parser.add_argument("-N",help="How many nodes per job, if this is 1, -n has to be setup",type=int)
 parser.add_argument("-n",help="How many cpus is used per job, in srun the value after -n, when using multiple nodes this is ignored for now",type=int)
+parser.add_argument("--diff_Ncpu",help="Use this if you use more than 1 node for 1 job, but you for some reason do not want use ALL CPU cores on these nodes for the submission, but want to have a custon srun -n",action="store_true")
 parser.add_argument("--prep_submit",help="If true, script will create an header for the basic FHI-Aims job based on provided values",action="store_true")
 parser.add_argument("--job_name","-J",help="Name that will be put into the header of submit file",type=str,default="aims_job")
 parser.add_argument("--strucs",help="File from which DFT folders should be prepared",type=str)
@@ -35,14 +36,14 @@ aims_run_file = "aims_run.py"
 ########
 per_file = args.per_submit
 hpc_setting = args.hpc
-
 my_job = hpc_workflow.HPC_job(
     usedN = args.usedN,
     N = args.N,
     n = args.n,
     method = args.method,
     hpc_setting = args.hpc,
-    path_to_species=args.aims_species_path
+    path_to_species=args.aims_species_path,
+    diff_Ncpu=args.diff_Ncpu
 )
 if args.prep_submit:
     my_job.prep_submit_header(wall_time = args.wall_time)
