@@ -20,11 +20,17 @@ class HPC_job():
                  method = "aims",
                  hpc_setting = "raven",
                  path_to_species=None,
+                 head_temp_name = "header_file",
+                 submit_file_name = "submit_file",
+                 paral_file_name = "paral_file",
                  diff_Ncpu=False):
         # Raven settings
         self.method = method
+        self.head_temp_name = head_temp_name
         self.hpc_setting = hpc_setting
         self.diff_Ncpu = diff_Ncpu
+        self.submit_file_name = submit_file_name
+        self.paral_file_name = paral_file_name
         if self.method == "aims":
             if self.hpc_setting == "raven":
                 self.PRESETS_FOR_HEADER = aims.aims_input.aims_for_raven
@@ -82,9 +88,9 @@ class HPC_job():
     def prep_submit_header(self,
                            wall_time="1:00:00"):
         '''
-        This function is universal for all methods, only thing dependable on used cacl method is PRESETS_FOR_HEADER. 
+        This function is universal for all methods, only thing dependable on used calc method is PRESETS_FOR_HEADER. 
         '''
-        header_file = open("header_file.temp","w")
+        header_file = open(f"{self.head_temp_name}.temp","w")
         header_file.write("#!/bin/bash -l\n")
         header_file.write("#SBATCH -o ./tjob.out.%j\n") # stardart output file
         header_file.write("#SBATCH -e ./tjob.err.%j\n") # error output file
@@ -114,7 +120,7 @@ class HPC_job():
                      strucs_format,
                      strucs_ext,
                      per_file):
-        with open("header_file.temp","r") as head_file:
+        with open(f"{self.head_temp_name}.temp","r") as head_file:
             head_data= head_file.read()
         import ase.io
         import shutil
@@ -128,7 +134,7 @@ class HPC_job():
                     slurm_file.close()
                     paral_file.close()
                 count+=1
-                slurm_file = open(f"submit_file{count}.sl","w")
+                slurm_file = open(f"{self.submit_file_name}{count}.sl","w")
                 slurm_file.write(head_data)
                 slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {self.at_the_same_time} < paral_file{count}")
                 paral_file = open(f"paral_file{count}","w")
@@ -162,7 +168,7 @@ class HPC_job():
             atoms_indeces = [atoms_indeces[sorted_indice] for sorted_indice in sorted_indices]
             if len(atoms_lines) > 1:
                 atoms_lines = [atoms_lines[sorted_indice] for sorted_indice in sorted_indices]
-        with open("header_file.temp","r") as head_file:
+        with open(f"{self.head_temp_name}.temp","r") as head_file:
             head_data= head_file.read()
         import ase.io
         import shutil
@@ -173,6 +179,108 @@ class HPC_job():
         prev_sub_mol = 0
         count = -1
         if all_control_same:
+            aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict)
+        for id_mol,mol in enumerate(mols):
+            if id_mol%per_file == 0:
+                if id_mol != 0:
+                    slurm_file.close()
+                    paral_file.close()
+                count+=1
+                slurm_file = open(f"{self.submit_file_name}{count}.sl","w")
+                slurm_file.write(head_data)
+                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {int(self.at_the_same_time)} < {self.paral_file_name}{count}")
+                paral_file = open(f"paral_file{count}","w")
+            dir_name = f"struc{id_mol:0{counting_digits}}/"
+            struc_file_name = f"struc{id_mol:0{counting_digits}}{strucs_ext}" 
+            ase.io.write(struc_file_name,mol,format=f"{strucs_format}")
+            ase.io.write("temp.in",mol,format=f"aims")
+            #################
+            with open('temp.in', 'r') as file:
+                temp_geometry = file.readlines()
+            appended_header = 5 # probably be aware if ASE will change number of lines it putting in the geometry.in file 
+            for geometry_line in geometry_lines:
+                temp_geometry.insert(appended_header, f'{geometry_line}\n')
+                appended_header += 1
+            if len(atoms_lines) == 1:
+                cur_line = atoms_lines[0]
+                for atoms_indx in atoms_indeces:
+                    temp_geometry.insert(atoms_indx+appended_header+1, f'{cur_line}\n') # + 1 because the keywords inside of the geometry.in are applied on the previous line
+            with open('geometry.in', 'w') as file:
+                file.writelines(temp_geometry)
+
+            ################
+            os.mkdir(dir_name)
+            shutil.move(struc_file_name,dir_name)
+            shutil.move("geometry.in",dir_name)
+            if not all_control_same:
+                aims.aims_input.prep_aims_file(mol,aims_species)
+            shutil.copy("control.in",dir_name)
+            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
+            # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")
+            paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
+
+    def prep_only_aims_submit_restart(self,
+                                      prep_name_folders="struc",
+                                        per_file=64):
+        '''
+        This is the code that will prep submission for unfinished jobs
+        At this moment I am distiqusing if the job should be restart only by 
+        "Have a nice day" not in lines[line] 
+        or 
+        "scf_solver: SCF cycle not converged"
+        TODO: allow to resubmit SCF not converged structures
+        
+        TODO: This should allows to change srun setting, but will used previous control.in and geometry.in 
+        '''
+
+        #if isinstance(atoms_lines, str):
+        #    atoms_lines = [atoms_lines]
+        len_prep = len(prep_name_folders)
+        aims_command=f"{self.AIMS_EXEC}"
+        with open(f"{self.head_temp_name}.temp","r") as head_file:
+            head_data= head_file.read()
+        import subprocess
+        if os.path.exists("end_of_aimsout_files"):
+            os.remove("end_of_aimsout_files")
+        command = "for a in */; do echo $a >> end_of_aimsout_files; tail -2 ${a}aims.out | head -1 >> end_of_aimsout_files ; done"
+        subprocess.run(command, shell=True, capture_output=True, text=True) # this is way faster than open each file in python
+        lines = open("end_of_aimsout_files","r").readlines()
+        prev_line = lines[0]
+        to_restart = []
+        for line in range(1,len(lines)):
+            if prep_name_folders in lines[line] and prep_name_folders in prev_line:
+                to_restart.append(prev_line) 
+            if prep_name_folders not in lines[line] and ("Have a nice day" not in lines[line] and "scf_solver: SCF cycle not converged" not in lines[line]) and prep_name_folders in prev_line:
+                to_restart.append(prev_line)
+            prev_line = lines[line]
+        count = -1
+        for id_mol,mol_name in enumerate(to_restart):
+            if (mol_name[-1]=="\n"):
+                mol_name = mol_name[:-1]
+                # id_mol = int(mol_name[len_prep:-2])
+            # else:
+            # id_folder = int(mol_name[len_prep:])
+            if id_mol%per_file == 0:
+                print("hello")
+                if id_mol != 0:
+                    slurm_file.close()
+                    paral_file.close()
+                count+=1
+                slurm_file = open(f"{self.submit_file_name}{count}.sl","w")
+                slurm_file.write(head_data)
+                slurm_file.write(f"parallel --delay 0.2 --joblog task.log --progress -j {int(self.at_the_same_time)} < {self.paral_file_name}{count}")
+                paral_file = open(f"{self.paral_file_name}{count}","w")
+            paral_file.write(f"cd {mol_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
+        '''
+        import ase.io
+        import shutil
+        mols = ase.io.read(f"{strucs}@:",format=f"{strucs_format}")
+        aims_command=f"{self.AIMS_EXEC}"
+        aims_species=f"{self.AIMS_SPECIEC}{aims_basis}"
+        counting_digits = len(str(len(mols)))+1
+        prev_sub_mol = 0
+        count = -1
+        if all_control_same: # TODO: what the fuck is this doing, and what I was thinking?
             aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict)
         for id_mol,mol in enumerate(mols):
             if id_mol%per_file == 0:
@@ -212,3 +320,4 @@ class HPC_job():
             # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out; python -c \"import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name=f'{{sys.argv[1]}}.xyz', properties=['energy', 'forces', 'hirshfeld']); mol = ase.io.read(f'{{sys.argv[1]}}.xyz', format='extxyz'); save_results_to_xyz(mol, res)\" {dir_name[:-1]}\n")
             # paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command}\n; python3 -c 'import sys; from jobcraft.aims.aims_output import read_aims_output; import ase.io; from jobcraft.file_creation import save_results_to_xyz; res = read_aims_output(mol_file_name="struc00100.xyz", properties=["energy", "forces", "hirshfeld"]); mol = ase.io.read(f"{sys.argv[1]}.xyz", format="extxyz"); save_results_to_xyz(mol, res)' {dir_name[:-1]}.xyz")
             paral_file.write(f"cd {dir_name}; srun -N {self.node_per_job} -n {self.cpu_per_job_to_srun} {aims_command} >> aims.out\n")
+        '''
