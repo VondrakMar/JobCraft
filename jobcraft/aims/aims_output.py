@@ -19,9 +19,9 @@ def read_aims_output(mol: str =None,
 
     calculation_time, hartree_multipoles, fermi_level, VBM, CBM and number_of_scf_cylces are stole from Will Baldwin
     '''
-    implemented_properties = ["energy","forces","hirshfeld","hirshfeld_spin","calculation_time","number_of_scf_cylces","fermi_level","fermi_level_up","fermi_level_down","VBM","CBM","hartee_multipoles"]
+    implemented_properties = ["energy","forces","hirshfeld","dipole","hirshfeld_spin","calculation_time","number_of_scf_cylces","fermi_level","fermi_level_up","fermi_level_down","VBM","CBM","hartee_multipoles"]
     for property in properties:
-        assert property in implemented_properties, f"{property} not implemented, please use one of the {implemented_properties}"
+        assert property in implemented_properties, f"${property} not implemented, please use one of the ${implemented_properties}"
     if mol_file_name == None:
         assert type(mol) != list, "mol should be a ase.atoms object not a list"
         natoms = len(mol)
@@ -57,6 +57,11 @@ def read_aims_output(mol: str =None,
                     for iforce in range(3):
                         forces[iatom, iforce] = float(data[2 + iforce])
         results['forces'] = forces
+    if "dipole" in properties:
+        for n, line in enumerate(output_file):
+            if line.rfind('Total dipole moment [eAng]') > -1:
+                dip = np.array([float(line.split()[6]),float(line.split()[7]),float(line.split()[8])])
+        results["dipole"] = dip
     if "hirshfeld_spin" in properties:
         hirshfeld_q = []
         hirshfeld_spin=[]
@@ -81,7 +86,6 @@ def read_aims_output(mol: str =None,
                         tmp_quadr.extend([float(tmp) for tmp in output_file[n + iatom*11 + 11].split()[-3:]])
                         hirshfeld_quadruple.append(tmp_quadr)
                 elif not spin:
-                    print("Hello")
                     for iatom in range(natoms):
                         hirshfeld_q.append(float(output_file[n + iatom*10 + 3].split()[-1]))
                         free_atom_volume.append(float(output_file[n + iatom*10 + 4].split()[-1]))
