@@ -173,20 +173,27 @@ def plot_correlation(atoms_list,
         plt.show()
 
 
-# mols = read("test_res_positive_bulk_scratch.xyz@:",format="extxyz")
-mols = read("ft.xyz@:20",format="extxyz")
-# print(sum(mols[0].arrays["MACE_charges"]))
-print([k for k in mols[10].arrays.keys()])
-print([k for k in mols[10].info.keys()])
-plot_correlation(mols,
+def check_configs(mols_list,config_name="rest_configs"):
+    for id_mol,mol in enumerate(mols_list):
+        if "config_type" not in mol.info.keys():
+            mol.info["config_type"] = "rest"
+            # print(id_mol)
+
+mols = read("all_configsSiO2_results_stage1.xyz@:",format="extxyz")
+check_configs(mols)
+picked_mols =[]
+for mol in mols:
+    if mol.info["config_type"] == "Vm":
+        picked_mols.append(mol)
+plot_correlation(picked_mols,
                  ml_energy = "MACE_energy",
-                 dft_energy = "dft_energy",
-                 atom_Es = atomic_energies,
+                 dft_energy = "AIMS_energy",
+                 atom_Es = None,#atomic_energies,
                  plot_per_atom = True,
-                 dft_info_list=["dft_energy"],
+                 dft_info_list=["AIMS_energy"],
                  ml_info_list=["MACE_energy"],
-                 ml_arrays_list=["MACE_forces","MACE_charges"],
-                 dft_arrays_list=["dft_forces","dft_hirshfeld_q"],
+                 ml_arrays_list=["MACE_forces"],
+                 dft_arrays_list=["AIMS_forces"],
                  info_names=["energy (eV/atom)"],
-                 arrays_names=["forces (eV/A)", "charges (e)"],
+                 arrays_names=["forces (eV/A)"],
                  )
