@@ -151,13 +151,14 @@ class HPC_job():
                           strucs,
                           strucs_format,
                           strucs_ext,
-                          geometry_lines=[],
-                          atoms_lines=[],
-                          atoms_indeces=[],
-                          aims_basis="light",
-                          per_file=64,
+                          geometry_lines = [],
+                          atoms_lines = [],
+                          atoms_indeces = [],
+                          aims_basis = "light",
+                          per_file = 64,
                           all_control_same = True,
-                          aims_kwargs_dict=None):
+                          aims_kwargs_dict = None,
+                          aims_outputs = None):
         if isinstance(atoms_lines, str):
             atoms_lines = [atoms_lines]
         assert len(atoms_indeces) == len(atoms_lines) or len(atoms_lines) == 1, "atoms_indeces and atoms_lines are different lenght"
@@ -179,7 +180,7 @@ class HPC_job():
         prev_sub_mol = 0
         count = -1
         if all_control_same:
-            aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict)
+            aims.aims_input.prep_aims_file(mols[0],aims_species,aims_kwargs_dict,aims_outputs)
         for id_mol,mol in enumerate(mols):
             if id_mol%per_file == 0:
                 if id_mol != 0:

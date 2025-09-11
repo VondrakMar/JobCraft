@@ -3,6 +3,7 @@ import formats
 import argparse
 import json
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("hpc",help="Setup which HPC you want to use, current settings are viper and raven",type=str,choices=["viper","raven"])
 parser.add_argument("--usedN",help="How many nodes are used in one submission script",type=int)
@@ -24,6 +25,7 @@ parser.add_argument("--aims_geometry_lines",nargs='+',default=[])
 parser.add_argument("--aims_atoms_lines",nargs='+',default=[])
 parser.add_argument("--aims_atoms_indeces",nargs='+',default=[])
 parser.add_argument("--aims_kwargs",type=str,default=None)
+parser.add_argument("--aims_outputs",nargs='+',default=None)
 
 args = parser.parse_args()
 strucs_ext = formats.ext_to_name(args.strucs_format)
@@ -62,11 +64,12 @@ if args.method == "aims" and args.use_ase == False:
     good for example when you want to run external field
     '''
     my_job.prep_aims_folders(strucs=args.strucs,
-                            strucs_format=strucs_format,
-                            strucs_ext=strucs_ext,
-                            aims_basis=args.aims_basis,
-                            per_file=per_file,
-                            geometry_lines = args.aims_geometry_lines,
-                            atoms_lines=args.aims_atoms_lines,
-                            atoms_indeces=args.aims_atoms_indeces,
-                            aims_kwargs_dict=aims_kwargs)
+                             strucs_format=strucs_format,
+                             strucs_ext=strucs_ext,
+                             aims_basis=args.aims_basis,
+                             per_file=per_file,
+                             geometry_lines = args.aims_geometry_lines,
+                             atoms_lines=args.aims_atoms_lines,
+                             atoms_indeces=args.aims_atoms_indeces,
+                             aims_kwargs_dict=aims_kwargs,
+                             aims_outputs=args.aims_outputs)

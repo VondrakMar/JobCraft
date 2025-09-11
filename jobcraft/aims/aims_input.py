@@ -52,7 +52,8 @@ def prep_aims_ase_file(base_file=None,
     
 def prep_aims_file(mol = None,
                    aims_species="raven/species/",
-                   aims_kwargs_dict=None):
+                   aims_kwargs_dict=None,
+                   aims_outputs=None):
     from ase.calculators.aims import Aims
     # for writing basic input file for aims I am using ASE.
 
@@ -67,14 +68,15 @@ def prep_aims_file(mol = None,
         }
     else:
         aims_kwargs = aims_kwargs_dict
-    aims_outputs = ["hirshfeld","hartree_multipoles"]
+    if aims_outputs is None:
+        aims_outputs = ["hirshfeld","hartree_multipoles"]
 
     calc = Aims(output=aims_outputs,
             command=None,
             species_dir=f"{aims_species}",
             **aims_kwargs)
 
-    calc.write_input(mol,"control.in")
+    calc.write_inputfiles(mol,"control.in")
 
 def prep_restart_DFTs():
     import subprocess
