@@ -1,10 +1,12 @@
 import numpy as np
 from ase.io import read,write
 import matplotlib.pyplot as plt
-
+import sys
 
 # If you are not me and reading this, I know these are wrong values, don't judge me
 atomic_energies = {"H": -13.59803017, "O": -2043.567039796}
+# HSE intermediat atomic energies
+atomic_energiesHSE = {"Zn": -49117.156621722, "O": -2044.020037328}
 
 def preprocess_energy_for_per_atom(atoms_list,dft_energy,ml_energy,plot_per_atom,atomic_energies):
     dft_energy_list = []
@@ -47,6 +49,7 @@ def plot_correlation(atoms_list,
                      ml_pre="ml_",
                      info_names=["energy"],
                      arrays_names=["forces"],
+                     save_name="my_plot",
                      atom_Es = None,
                      plot_per_atom=False):#["ml_energy","dft_energy"]):
     # if plot_per_atom and atom_Es is None:
@@ -98,7 +101,9 @@ def plot_correlation(atoms_list,
         ml_values[arrays_ml] = np.array(ml_values[arrays_ml])
 
 
-    
+    """
+    This plots Energy, this is seprated part because it can plot different energies based on the input
+    """
     plt.figure(figsize=(7,7))
     for ctype in unique_types:
         mask = config_types == ctype
@@ -115,12 +120,12 @@ def plot_correlation(atoms_list,
     plt.ylabel(f"{ml_pre}{energy_label}")
     plt.legend()
     plt.tight_layout()
-    plt.savefig("ftE.png", dpi=300)
-    plt.show()
+    plt.savefig(f"{save_name}_energy.png", dpi=300)
+    # plt.show()
 
 
 
-    
+    count = 0
     for info_dft,info_ml in zip(dft_info_list,ml_info_list):
         for ctype in unique_types:
             mask = config_types == ctype
@@ -139,14 +144,16 @@ def plot_correlation(atoms_list,
         plt.ylabel("ML Energy")
         plt.legend()
         plt.tight_layout()
-        plt.savefig("ftE.png", dpi=300)
+        plt.savefig(f"{save_name}info{count}.png", dpi=300)
         plt.show()
+        count +=1 
 
     expanded_config_types = np.repeat(config_types, atoms_lens)
     expanded_config_types_forces = np.repeat(config_types, np.array(atoms_lens) * 3)
     # Now you can make masks directly
     unique_types = np.unique(expanded_config_types)
 
+    count = 0
     for arrays_dft, arrays_ml,array_name in zip(dft_arrays_list, ml_arrays_list,arrays_names):
         for ctype in unique_types:
             if "forces" in arrays_dft:
@@ -169,8 +176,9 @@ def plot_correlation(atoms_list,
         # plt.title(f"Correlation between DFT and ML energies (R² = {r2:.3f})")
         plt.legend()
         plt.tight_layout()
-        plt.savefig("saved_pic.png", dpi=300)
-        plt.show()
+        plt.savefig(f"{save_name}array{count}.png", dpi=300)
+        count+=1
+        # plt.show()
 
 
 def check_configs(mols_list,config_name="rest_configs"):
@@ -179,21 +187,18 @@ def check_configs(mols_list,config_name="rest_configs"):
             mol.info["config_type"] = "rest"
             # print(id_mol)
 
-mols = read("all_configsSiO2_results_stage1.xyz@:",format="extxyz")
+mols = read(f"{sys.argv[1]}.xyz@:",format="extxyz")
 check_configs(mols)
-picked_mols =[]
-for mol in mols:
-    if mol.info["config_type"] == "Vm":
-        picked_mols.append(mol)
-plot_correlation(picked_mols,
+plot_correlation(mols,
                  ml_energy = "MACE_energy",
-                 dft_energy = "AIMS_energy",
-                 atom_Es = None,#atomic_energies,
+                 dft_energy = "dft_energy",
+                 atom_Es = atomic_energiesHSE,
                  plot_per_atom = True,
-                 dft_info_list=["AIMS_energy"],
+                 dft_info_list=["dft_energy"],
                  ml_info_list=["MACE_energy"],
                  ml_arrays_list=["MACE_forces"],
-                 dft_arrays_list=["AIMS_forces"],
+                 dft_arrays_list=["dft_forces"],
                  info_names=["energy (eV/atom)"],
                  arrays_names=["forces (eV/A)"],
+                 save_name=f"{sys.argv[1]}"
                  )
