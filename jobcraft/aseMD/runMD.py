@@ -41,7 +41,7 @@ def run_minimization_cell(mol,
     qn = QuasiNewton(ecf)
     traj = Trajectory(f"{trj_name}.traj","w",mol)
     qn.attach(traj)
-    qn.run(fmax=fmax,steps) 
+    qn.run(fmax=fmax,steps=steps) 
     # dyn = QuasiNewton(atoms=mol, trajectory=f'{trj_name}.traj')#, restart=f'{trj_name}.pckl') qn.run(fmax=fmax,steps=steps)
 
 
