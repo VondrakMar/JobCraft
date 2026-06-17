@@ -69,13 +69,19 @@ def random_rotate_atoms(atoms: ase.Atoms, rng=None) -> ase.Atoms:
 
     return mol
 
-def is_inside_cell(atoms):
+def is_inside_cell(atoms, indices=None):
     scaled = atoms.get_scaled_positions(wrap=False)
+    if indices is not None:
+        scaled = scaled[indices]
     return ((scaled >= 0.0) & (scaled < 1.0)).all()
 
 def solvate_slab(slab, solvent, solv_axis=2, slab_element=None, N_mols=20,sphere_factor=1.5):
     sphere_rad = get_sphere(solvent,sphere_factor)
-
+    if type(solvent) == ase.atoms.Atoms:
+        Nats_solvents = len(solvent)
+    else:
+        print("solvent has to be ase.atoms object")
+        return
     if slab_element is None:
         el_max_slab = slab.positions[:, solv_axis].argmax()
     else:
@@ -95,12 +101,12 @@ def solvate_slab(slab, solvent, solv_axis=2, slab_element=None, N_mols=20,sphere
     
     x_pos = 0.5
     y_pos = 1.0
-    z_layer = 0  
+    z_layer = 0 
 
+    # all_moves = []
     for admolecule in range(N_mols):
         placed_this_mol = False
         attempts = 0
-
         while not placed_this_mol and attempts < max_attempts_per_mol:
             tmp_solv = deepcopy(solvent)
             tmp_solv = random_rotate_atoms(tmp_solv)
@@ -109,8 +115,11 @@ def solvate_slab(slab, solvent, solv_axis=2, slab_element=None, N_mols=20,sphere
             tmp_solv.translate([x_pos, y_pos, z_trans])
 
             tmp_slab_solv = slab_solv + tmp_solv
-
-            if is_inside_cell(tmp_slab_solv):
+            solv_indices = list(range(len(slab_solv), len(tmp_slab_solv)))
+            
+            # all_moves.append(tmp_slab_solv)
+            if is_inside_cell(tmp_slab_solv, indices=solv_indices):
+                # print("is_inside")
                 slab_solv = tmp_slab_solv
                 placed_this_mol = True
                 
@@ -122,7 +131,7 @@ def solvate_slab(slab, solvent, solv_axis=2, slab_element=None, N_mols=20,sphere
                         y_pos = 1.0
                         z_layer += 1
             else:
-                
+                # print("is not inside")
                 x_pos += sphere_rad
                 if x_pos + sphere_rad > x_max:
                     x_pos = 0.5
@@ -133,6 +142,7 @@ def solvate_slab(slab, solvent, solv_axis=2, slab_element=None, N_mols=20,sphere
                 attempts += 1
 
         if not placed_this_mol:
+            # view(all_moves)
             print(f"Warning: could not place molecule {admolecule}")
             break
 

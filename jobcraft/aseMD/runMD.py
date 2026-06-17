@@ -57,7 +57,7 @@ def run_NVT(mol,
         mol.set_constraint(constraints)
     if init_T is not None:
         MaxwellBoltzmannDistribution(mol, init_T * units.kB)
-    if stationary:
+    if stationary:g
         Stationary(mol)
     if "H" in mol.symbols and time_step >= 1.0:
         print("Be aware you are running time step larger than what I would do for structure with hydrogens")
@@ -66,17 +66,15 @@ def run_NVT(mol,
     dyn.attach(traj.write, interval=50)
     dyn.run(n_steps)
 
-    
+from mace.calculators import MACECalculator    
 if __name__== "__main__":
-    # atoms = read("def1Vs_part3.xyz@:",format="extxyz")
-    atoms = read("def1Vs_part1.xyzMD2.traj@::50")
-    macemp = mace_mp(model="MACE-matpes-pbe-omat-ft.model",device="cuda",dispersion=False,enable_cueq=True,default_dtype="float64")   
-    for id_mol,mol in enumerate(atoms): 
-        mol.calc = macemp
-        run_minimization_cell(mol,fmax=0.001,steps=1000,trj_name=f"struc_min{id_mol}")
-        run_NVT(mol,
-                n_steps=50000,
-                T=400,
-                init_T= 2*400,
-                trj_name=f"strucMD{id_mol}")
-                     
+    atoms = read("struc.xyz",format="extxyz")
+    mace_calc = mace_mp(model="MACE-matpes-pbe-omat-ft.model",device="cuda",dispersion=False,enable_cueq=True,default_dtype="float64")   
+    #mace_calc = MACECalculator(model_path='CuOrun3_naive.model', device='cuda')
+    mol.calc = mace_calc
+    run_minimization(mol,fmax=0.01,steps=10000,trj_name=f"gasMin")
+    run_NVT(mol,
+            n_steps=100000,
+            T=300,
+            init_T= 0.5*300,
+            trj_name=f"gasMD")

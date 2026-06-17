@@ -26,10 +26,10 @@ import numpy as np
 NA = 6.02214076e23  
 
 def density_g_cm3(atoms: Atoms) -> float:
-    masses = atoms.get_masses()  # amu per atom
+    masses = atoms.get_masses() 
     mass_total_amu = masses.sum()
-    mass_g = mass_total_amu / NA  # since 1 mol of 1 amu = 1 g
-    vol_A3 = atoms.get_volume()       # Å^3
+    mass_g = mass_total_amu / NA  
+    vol_A3 = atoms.get_volume()  
     vol_cm3 = vol_A3 * 1e-24
     return mass_g / vol_cm3
 
