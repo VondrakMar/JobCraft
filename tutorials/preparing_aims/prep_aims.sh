@@ -1,6 +1,6 @@
 #!/bin/bash
 script_path=/home/mvondrak/development/JobCraft/jobcraft/preparation_script.py 
-python ${script_path} raven \
+python ${script_path} --hpc raven \
     --usedN 4 \
     -N 1 \
     -n 16 \
